@@ -7,6 +7,11 @@ import argparse
 import json
 import random
 from datetime import datetime
+from datetime import datetime as dt
+from datetime import timedelta
+
+# typing
+from typing import Dict, List, Any
 
 # third party
 import names  # http://treyhunner.com/2013/02/random-name-generator/
@@ -21,13 +26,18 @@ import scipy as sp
 import matplotlib.pyplot as plt
 
 
+# GLOBALS ##########################################################################################
+# tweak this to generate more or less data (keep as int)
+SIZE_MULTIPLIER: int = 10
+
+
 # First make sure our secret file exists
 assert os.path.isfile('./config.json'), 'Please provide a config.json'
 # Load in API info
 #     * key
 #     * secret
 with open('./config.json', 'r') as fobj:
-    API = json.loads(fobj.read())
+    API: Dict[str, str] = json.loads(fobj.read())
 # Now make sure it provides the correct information
 assert API['key'] is not None, 'Need an API key'
 assert API['secret'] is not None, 'Need an API secret'
@@ -36,7 +46,7 @@ assert API['secret'] is not None, 'Need an API secret'
 # Going to need a global db instance for this
 db = orm.Database()
 
-
+# CODE #############################################################################################
 def main():
     args = get_args()
 
@@ -45,15 +55,15 @@ def main():
 
     client = stream.connect(API['key'], API['secret'])
 
-    users = setup_data()
+    users: Dict[str, List[str]] = setup_data()
     generate_events(users)
 
 
 @orm.db_session
-def setup_data():
+def setup_data() -> Dict[str, List[str]]:
     # First let's generate a bunch of random users,
     # store as edge dictionary to make friendships easier
-    users = {names.get_first_name(): list() for _ in range(100)}
+    users = {names.get_first_name(): list() for _ in range(1 * SIZE_MULTIPLIER)}
 
     # for each user friend a random number of friends between 2 and 10
     # this is kinda sloppy since random.choices only has replacement,
@@ -62,7 +72,7 @@ def setup_data():
     for user in users:
         # we don't want them to try to friend themselves....
         possible_friends = list(set(users.keys()) - set([user]))
-        num_friends      = random.randint(5, 15)
+        num_friends      = random.randint(1, SIZE_MULTIPLIER)
         friends          = list(set(random.choices(possible_friends,
                                                    k=num_friends)))
         users[user]      = friends
@@ -99,16 +109,24 @@ def draw_connections(users):
 
     # this is gonna look real messy cause there are sooo many connections...
     # GOOD
-    nx.draw(social_graph)
-    plt.savefig('nasty_mess_of_friends.png')
+    # only wanna draw once
+    # nx.draw(social_graph)
+    # plt.savefig('nasty_mess_of_friends.png')
 
 
 @orm.db_session
-def generate_posts(users):
-    # Lets generate somewhere between 50 and 100 posts per user
+def generate_posts(users: Dict[str, List[str]]):
+    # Lets generate somewhere between 50 and 100 posts per user over a week
+    week_seconds: int = 604800  # https://www.wolframalpha.com/input/?i=1+week+to+seconds
     for user in users:
-        for _ in range(random.randint(50, 100)):
-            pass
+        user = User.select(lambda x: x.name == user).first()
+        for _ in range(random.randint(5 * SIZE_MULTIPLIER, 10 * SIZE_MULTIPLIER)):
+            Post(
+                name=str(loremipsum.generate_sentences(1)),
+                text=str(loremipsum.generate_paragraphs(random.randint(1, 10))),
+                date_posted=(dt.now() + timedelta(seconds=(random.random() * week_seconds))),
+                user=user
+            )
 
 
 @orm.db_session
@@ -126,7 +144,7 @@ def get_args():
     return parser.parse_args()
 
 
-# Declaring db schema down here ####################################################################
+# DATABASE SCHEMA ##################################################################################
 class User(db.Entity):
     name             = orm.Required(str)
     friends          = orm.Set(lambda: User)
@@ -143,6 +161,13 @@ class Post(db.Entity):
     user             = orm.Required(lambda: User)
     user_likes       = orm.Set(lambda: User)
     user_impressions = orm.Set(lambda: User)
+
+
+class Event(db.Entity):
+    """ Basically modelling off of stream API """
+    actor = orm.Required(lambda: User)
+    verb  = orm.Required(str)
+    obj   = orm.Required(lambda: Post)
 
 
 if __name__ == '__main__':
