@@ -2,6 +2,7 @@
 
 # stdlib
 import sys
+import random
 import argparse
 from typing import Dict, List, Any
 
@@ -12,6 +13,8 @@ import stream
 import streamdemo
 from streamdemo import setup
 from streamdemo import API
+from streamdemo import feedtools
+from streamdemo import database
 
 
 def main():
@@ -21,6 +24,10 @@ def main():
 
     users: Dict[str, List[str]] = setup.setup_data()
     setup.generate_events(users)
+
+    random_userid = database.usercollection.find_one({'name': random.choice(list(users.keys()))})['_id']
+    feedtools.flatfeed(random_userid)
+    feedtools.trainedfeed(random_userid)
 
 
 def get_args():
