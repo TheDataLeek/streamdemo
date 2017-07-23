@@ -1,3 +1,5 @@
 config.json
 
 *.idea
+
+*__cache__*
