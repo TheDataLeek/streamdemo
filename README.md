@@ -76,3 +76,82 @@ chris.add_activity({
     'message': 'This bird is absolutely beautiful. Glad it\'s recovering from a damaged wing.'
 })
 ```
+We start by just sending user follows to Stream, and then each of the events we post.
+
+# Feed Types
+
+## Flat Feed
+
+We can generate a flat post feed by (provided a random user) filtering based on their friends (which
+translates in this situation to who they follow) and sorting chronologically.
+
+Stream's default feed is this flat feed. It's tricky to make this code easy to re-run and get the
+same results because even though we can delete the MongoDB Database, it's trickier to do the same
+for Stream. In the ideal world our flat feed should match the Stream feed perfectly, but in reality
+since we don't delete data from Stream it doesn't.
+
+## Personalized Feed
+
+Now, if we want to add personalization we can use the `interact` type events instead of `post`
+events.
+
+For simplicity we assume that we can track and determine the "topic" of each post, and do a
+user-by-user weighting based on these topics. This isn't exactly traditional *machine learning* but
+instead an adaptive weighting algorithm. That being said, doing a "state of the art ML solution"
+would be overkill here. After all, ["Perfect is the Enemy of
+Good"](https://en.wikipedia.org/wiki/Perfect_is_the_enemy_of_good). I also realize that I'm kinda
+glossing over a huge step here of how something like the post topic can be determined, but that's a
+somewhat unrelated problem so I'm skipping past it.
+
+Let's jump into how this thing works.
+
+The first thing to realize is that we want any weighting system to decay over time, and *when* a
+user interacts with a post will dictate how the weighting algorithm performs. We don't want to force
+a user to look at the same sort of things always once the weights are settled, as individual's
+interests adjust over time, and the easiest way to get bored of a platform is via repetition.
+
+So what are the weights? In short they are small modifiers that are used to adjust the feed order.
+In practice this means that every topic has an initial weight of 0 (its minimum) with maximum of 1.
+As the user has more interactions with that topic, the more the weight jumps towards 1. This works
+via the simple equation:
+
+```python
+def score_bump(score: float) -> float:
+    return score + ((1 - score) / 2)
+```
+
+In other words, jump the score to the midpoint between its current value and 1. For example,
+
+```
+0 -> 0.5 -> 0.75 -> ... -> 1
+```
+
+In order to decay now we need to determine an easy way for it to drop back down to 0 after time
+passes. To do this we use a [Logistic
+Equation](http://mathworld.wolfram.com/LogisticEquation.html)'s first derivative and treat the
+entire thing like a poor differential equation solver, more specifically like single-step
+Runge-Kutta.
+
+In other words, at each value of the score, we look at the slope of the logistic curve at that point
+and jump forwards by the (normalized) amount of time elapsed since the last interaction we had. This
+causes the score to decrease slowly initially, and then speed up the longer since interaction.
+
+```python
+def decay_func(x):
+    return 2 / (1 + np.exp(5 * rate_parameter * x))
+
+def decay_func_p(x):
+    return (-2 * (5 * rate_parameter) * np.exp(5 * rate_parameter * x)) / ((np.exp(5 * rate_parameter * x) + 1) ** 2)
+```
+
+For a visual on this, see this pic.
+
+![png](./timedecay.png)
+
+This is perfect for us, since the longer it's been since a user interacts with a topic the less
+likely it is that we want to filter on it.
+
+![png](./exampledecay.png)
+
+Once we train our weights we just add them to the initial weights based off of the normalized
+datetime of the post and resort based on these weights.

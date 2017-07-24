@@ -72,7 +72,7 @@ def time_decay(score: float, jump_dist: Optional[float]=1.0, rate_parameter: Opt
     BASICALLY JUST RK1 HILARIOUSLY
     """
     if score <= 0.01:
-        return 0
+        return 0.01
 
     # TODO: Pics
     def decay_func(x):
