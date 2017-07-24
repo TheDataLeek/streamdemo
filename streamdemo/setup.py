@@ -122,9 +122,9 @@ def generate_posts(users: Dict[str, List[str]]):
         # To generate a random time, we add to the start of a week a random multiple of week's seconds
         activities = [
             {
-                'actor': str(user['_id']),
+                'actor': user['_id'],
                 'verb': 'post',
-                'object': None,
+                'object': 'None',
                 'time': random_week_time(),
                 'message': 'foooobar',
                 'topic': random.choice(THEMES)
@@ -133,6 +133,8 @@ def generate_posts(users: Dict[str, List[str]]):
         ]
         activitycollection.insert_many(activities)
 
+        for obj in activities:
+            obj['actor'] = str(obj['actor'])
         userfeed = client.feed('user', str(user['_id']))
         userfeed.add_activities(activities)
 
@@ -142,22 +144,34 @@ def generate_events(users):
     # These are the collected metrics that we'll analyze
     # We'll have all events happen ONLY AFTER the first week
     start_of_second_week = START_OF_WEEK + timedelta(seconds=WEEK_SECONDS)
+    interactions = {}
     for _ in range(100):
         usernames = list(users.keys())
         from_user = usercollection.find_one({'name': random.choice(usernames)})
+        interactions[from_user['_id']] = []
         # print(from_user['friends'])
         to_user = usercollection.find_one({'_id': random.choice(from_user['friends'])})
 
         to_user_post = random.choice(list(activitycollection.find({'actor': to_user['_id'], 'verb': 'post'})))
 
         activity = {
-            'actor': str(from_user['_id']),
+            'actor': from_user['_id'],
             'verb': 'interact',   # type of interaction doesn't matter here, gonna weight everything equally
-            'object': str(to_user_post['_id']),
+            'object': to_user_post['_id'],
             'time': random_week_time(weekstart=start_of_second_week),  # again after first week
-            'to': str(to_user['_id'])
+            'to': to_user['_id']
         }
         activitycollection.insert_one(activity)
 
-        userfeed = client.feed('user', str(from_user['_id']))
-        userfeed.add_activity(activity)
+        interactions[from_user['_id']].append(activity)
+
+    for user, items in interactions.items():
+        if len(items) == 0:
+            continue
+        for item in items:
+            item['actor'] = str(item['actor'])
+            item['time'] = str(item['time'])
+            item['object'] = str(item['object'])
+            item.pop('to', None)
+        userfeed = client.feed('user', str(user))
+        userfeed.add_activities(items)

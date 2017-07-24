@@ -27,10 +27,14 @@ def main():
     flat = feedtools.flatfeed(random_userid)
     train, scores = feedtools.trainedfeed(random_userid)
 
+    userclient = setup.client.feed('timeline', str(random_userid))
+    # activities = jack.get(limit=10)['results']
+    userfeed = [obj for obj in userclient.get(limit=100)['results'] if obj.get('topic') is not None]
+
     print(scores)
 
-    for i in range(len(flat)):
-        print(f'{flat[i]["topic"]}\t{train[i]["topic"]}')
+    for i in range(len(userfeed)):
+        print(f'{flat[i]["topic"]}\t{train[i]["topic"]}\t{userfeed[i]["topic"]}')
 
 
 def get_args():
