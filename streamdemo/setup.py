@@ -33,6 +33,8 @@ from . import usercollection, activitycollection
 WEEK_SECONDS: int = 604800  # https://www.wolframalpha.com/input/?i=1+week+to+seconds
 START_OF_WEEK: datetime = dt.now()
 
+client = stream.connect(API['key'], API['secret'])
+
 
 def random_week_time(weekstart: Optional[datetime]=START_OF_WEEK) -> datetime:
     return (weekstart + timedelta(seconds=(random.random() * WEEK_SECONDS)))
@@ -82,6 +84,11 @@ def setup_data() -> Dict[str, List[str]]:
             }
         })
 
+        # connect to Stream
+        userline = client.feed('timeline', str(user['_id']))
+        for friend in friends:
+            userline.follow('user', str(friend))
+
     # hey look at that we have a network (draw real quick)
     draw_connections(users)
 
@@ -113,9 +120,9 @@ def generate_posts(users: Dict[str, List[str]]):
         user = usercollection.find_one({'name': user})  # pull out db obj
         random_num_of_posts = random.randint(5 * SIZE_MULTIPLIER, 10 * SIZE_MULTIPLIER)
         # To generate a random time, we add to the start of a week a random multiple of week's seconds
-        activitycollection.insert_many([
+        activities = [
             {
-                'actor': user['_id'],
+                'actor': str(user['_id']),
                 'verb': 'post',
                 'object': None,
                 'time': random_week_time(),
@@ -123,7 +130,11 @@ def generate_posts(users: Dict[str, List[str]]):
                 'topic': random.choice(THEMES)
             }
             for _ in range(random_num_of_posts)
-        ])
+        ]
+        activitycollection.insert_many(activities)
+
+        userfeed = client.feed('user', str(user['_id']))
+        userfeed.add_activities(activities)
 
 
 def generate_events(users):
@@ -139,10 +150,14 @@ def generate_events(users):
 
         to_user_post = random.choice(list(activitycollection.find({'actor': to_user['_id'], 'verb': 'post'})))
 
-        activitycollection.insert_one({
-            'actor': from_user['_id'],
+        activity = {
+            'actor': str(from_user['_id']),
             'verb': 'interact',   # type of interaction doesn't matter here, gonna weight everything equally
-            'object': to_user_post['_id'],
+            'object': str(to_user_post['_id']),
             'time': random_week_time(weekstart=start_of_second_week),  # again after first week
-            'to': to_user['_id']
-        })
+            'to': str(to_user['_id'])
+        }
+        activitycollection.insert_one(activity)
+
+        userfeed = client.feed('user', str(from_user['_id']))
+        userfeed.add_activity(activity)

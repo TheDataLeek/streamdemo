@@ -1,5 +1,5 @@
 # stdlib
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import bson
 
 # 3rd party
@@ -9,6 +9,7 @@ from pprint import pprint
 from . import usercollection, activitycollection
 from . import START_OF_WEEK
 from .util import datetime_to_secs
+from .algo import train_from_interactions
 
 
 def flatfeed(userid: bson.objectid.ObjectId) -> List[Dict[str, Any]]:
@@ -27,7 +28,7 @@ def flatfeed(userid: bson.objectid.ObjectId) -> List[Dict[str, Any]]:
     return feed
 
 
-def trainedfeed(userid: bson.objectid.ObjectId) -> List[Dict[str, Any]]:
+def trainedfeed(userid: bson.objectid.ObjectId) -> Tuple[List[Dict[str, Any]], Dict[str, float]]:
     feed = flatfeed(userid)
 
     interactions = list(activitycollection.find({'actor': userid, 'verb': 'interact'}))
@@ -45,6 +46,18 @@ def trainedfeed(userid: bson.objectid.ObjectId) -> List[Dict[str, Any]]:
                      for obj in feed]
 
     # now we can fiddle with weights based on interactions
+    # Using algo.py for algorithm here
+    weights = train_from_interactions(interactions)
 
-    return weighted_feed
+    weighted_feed = order_by_theme_weights(weights, weighted_feed)
 
+    return weighted_feed, weights
+
+
+def order_by_theme_weights(weights, feed):
+    new_feed = []
+    for obj in feed:
+        obj['weight'] = obj['weight'] * weights[obj['topic']][1]
+        new_feed.append(obj)
+    feed.sort(key=lambda obj: obj['weight'])
+    return feed
