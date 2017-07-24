@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 
 # stdlib
+import sys
 import random
 from datetime import datetime
 from datetime import datetime as dt
@@ -21,7 +22,11 @@ from . import usercollection, activitycollection
 # Globals
 WEEK_SECONDS: int = 604800  # https://www.wolframalpha.com/input/?i=1+week+to+seconds
 START_OF_WEEK: datetime = dt.now()
-client = stream.connect(API['key'], API['secret'])
+
+if 'test' in ''.join(sys.argv):
+    client = None
+else:
+    client = stream.connect(API['key'], API['secret'])
 
 
 def random_week_time(weekstart: Optional[datetime]=START_OF_WEEK) -> datetime:
