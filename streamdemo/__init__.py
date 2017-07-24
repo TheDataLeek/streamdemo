@@ -44,3 +44,4 @@ activitycollection = database.activitycollection
 # LOCALS ###########################################################################################
 from .setup import *
 from .feedtools import *
+from .algo import *

@@ -12,6 +12,8 @@ from . import THEMES
 from .util import datetime_to_secs
 
 """
+NOTES
+
 we have some f(post_topic, topics_interacted, interaction_times) -> weight_adj
 
 the more time since interaction the less it adjusts the weight
@@ -74,7 +76,6 @@ def time_decay(score: float, jump_dist: Optional[float]=1.0, rate_parameter: Opt
     if score <= 0.01:
         return 0.01
 
-    # TODO: Pics
     def decay_func(x):
         return 2 / (1 + np.exp(5 * rate_parameter * x))
 
@@ -85,10 +86,16 @@ def time_decay(score: float, jump_dist: Optional[float]=1.0, rate_parameter: Opt
 
 
 def score_bump(score: float) -> float:
+    """
+    Bump the score
+    """
     return score + ((1 - score) / 2)
 
 
 def train_from_interactions(interactions):
+    """
+    Given a set of interactions, train a set of topic weights
+    """
     scores = {t: (0, 0) for i, t in enumerate(THEMES)}
     stime, gap = normalize_times(interactions)
     for obj in sorted(interactions, key=lambda obj: obj['time']):
@@ -101,6 +108,9 @@ def train_from_interactions(interactions):
 
 
 def normalize_times(interactions):
+    """
+    find the start and gap of normalized times. Allows us to normalize more times.
+    """
     stime = datetime_to_secs(min(interactions, key=lambda obj: obj['time'])['time'])
     etime = datetime_to_secs(max(interactions, key=lambda obj: obj['time'])['time'])
     gap = etime - stime

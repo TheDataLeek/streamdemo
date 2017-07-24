@@ -29,6 +29,9 @@ def flatfeed(userid: bson.objectid.ObjectId) -> List[Dict[str, Any]]:
 
 
 def trainedfeed(userid: bson.objectid.ObjectId) -> Tuple[List[Dict[str, Any]], Dict[str, float]]:
+    """
+    Pull out a trained feed
+    """
     feed = flatfeed(userid)
 
     interactions = list(activitycollection.find({'actor': userid, 'verb': 'interact'}))
@@ -55,6 +58,9 @@ def trainedfeed(userid: bson.objectid.ObjectId) -> Tuple[List[Dict[str, Any]], D
 
 
 def order_by_theme_weights(weights, feed):
+    """
+    Order a feed by provided topic weights
+    """
     new_feed = []
     for obj in feed:
         obj['weight'] = obj['weight'] * weights[obj['topic']][1]

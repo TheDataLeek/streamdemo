@@ -1,6 +1,8 @@
 # Stream Demo
 ## Will Farmer
 
+![png](https://travis-ci.org/willzfarmer/streamdemo.svg)
+
 # Introduction
 
 This project acts as a way to tinker with the Stream API and add some machine learning capabilities
@@ -39,6 +41,10 @@ production scenario this could be easily extended. The schema is as follows:
     ]
 }
 ```
+
+When we generate data this results in a quite dense social network.
+
+![png](./nasty_mess_of_friends.png)
 
 ## Activity Document
 
@@ -155,3 +161,12 @@ likely it is that we want to filter on it.
 
 Once we train our weights we just add them to the initial weights based off of the normalized
 datetime of the post and resort based on these weights.
+
+# Conclusion
+
+Working with Stream is super straightforward, most of the effort in this project was used to setup a
+flexible framework around which I could use Stream and neat ML stuff.
+
+My personalized feed isn't perfect by a long shot, it overweights too much, but it's a good start.
+
+If you have questions look on www.will-farmer.com for my email or make a public issue here.

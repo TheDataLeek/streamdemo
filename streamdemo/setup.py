@@ -1,38 +1,26 @@
 #!/usr/bin/env python3.6
 
-#stdlib
-import sys
+# stdlib
 import random
-import time
 from datetime import datetime
 from datetime import datetime as dt
 from datetime import timedelta
-
-# typing
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 
 # third party
 import names  # http://treyhunner.com/2013/02/random-name-generator/
-import stream
-import pymongo as pm
-from pprint import pprint
-
-# third-party, math bits
 import networkx as nx
-import numpy as np
-import scipy as sp
-import matplotlib.pyplot as plt
+import stream
 
 # Local
 from . import API
 from . import SIZE_MULTIPLIER, THEMES
-from . import database  # pull in db
 from . import usercollection, activitycollection
 
 
+# Globals
 WEEK_SECONDS: int = 604800  # https://www.wolframalpha.com/input/?i=1+week+to+seconds
 START_OF_WEEK: datetime = dt.now()
-
 client = stream.connect(API['key'], API['secret'])
 
 
