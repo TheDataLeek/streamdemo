@@ -22,8 +22,10 @@ THEMES = [
     'Strength'
 ]
 
+TESTMODE = 'test' in ''.join(sys.argv)
+
 # First make sure our secret file exists, and we're not in test mode
-if 'test' in ''.join(sys.argv):
+if TESTMODE:
     API = {'key': None, 'secret': None}
 else:
     assert os.path.isfile('./config.json'), 'Please provide a config.json'
@@ -37,12 +39,18 @@ else:
     assert API['secret'] is not None, 'Need an API secret'
 
 # DATABASE #########################################################################################
-from pymongo import MongoClient
-client             = MongoClient()
-client.drop_database('streamdb')  # DROP BEFORE we gen new data
-database           = client.streamdb
-usercollection     = database.usercollection
-activitycollection = database.activitycollection
+if TESTMODE:
+    client             = None
+    database           = None
+    usercollection     = None
+    activitycollection = None
+else:
+    from pymongo import MongoClient
+    client             = MongoClient()
+    client.drop_database('streamdb')  # DROP BEFORE we gen new data
+    database           = client.streamdb
+    usercollection     = database.usercollection
+    activitycollection = database.activitycollection
 
 
 # LOCALS ###########################################################################################
